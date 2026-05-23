@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex SaaS Cohort & Churn Engine</title>
+    
+    <!-- Premium Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #060B12;
+            --panel-glass: rgba(13, 22, 33, 0.75);
+            --accent-primary: #10B981; /* Cyber Emerald Green */
+            --accent-glow: rgba(16, 185, 129, 0.25);
+            --crimson-alert: #EF4444;
+            --yellow-warning: #F59E0B;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-deep);
+            color: #E2E8F0;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: var(--panel-glass);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glow-emerald {
+            box-shadow: 0 0 20px var(--accent-glow);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .tab-btn.active {
+            border-bottom: 2px solid var(--accent-primary);
+            color: #FFF;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- HEADER -->
+    <header class="glass-panel border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-emerald-600 rounded-lg text-white glow-emerald">
+                <i data-lucide="trending-up" class="w-6 h-6 animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider text-white">📈 APEX COHORT INTELLIGENCE</h1>
+                <p class="text-xs text-emerald-400 font-mono">PREDICTIVE CHURN & CUSTOMER LTV ENGINE</p>
+            </div>
+        </div>
+        
+        <div class="flex space-x-6 text-sm font-mono">
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="text-gray-400">Simulation:</span>
+                <span class="text-emerald-400 font-bold" id="sim-status-lbl">ACTIVE</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                <span class="text-gray-400">Stats Model:</span>
+                <span class="text-indigo-400 font-bold">KM & COX REGRESSION</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="bg-gray-950 border-b border-gray-900 flex px-6 space-x-8">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active py-3 text-sm font-semibold tracking-wide transition text-emerald-400 flex items-center space-x-2">
+            <i data-lucide="pie-chart" class="w-4 h-4"></i>
+            <span>Cohort Dashboard</span>
+        </button>
+        <button onclick="switchTab('interview-guide')" id="tab-interview-guide" class="tab-btn py-3 text-sm font-semibold tracking-wide transition text-gray-400 hover:text-white flex items-center space-x-2">
+            <i data-lucide="bookmark" class="w-4 h-4"></i>
+            <span>SaaS Interview Guide</span>
+        </button>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="flex-1 p-6 space-y-6 overflow-y-auto max-w-7xl mx-auto w-full">
+
+        <!-- ========================================== -->
+        <!-- COHORT DASHBOARD TAB -->
+        <!-- ========================================== -->
+        <section id="pane-dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Financial KPIs Grid -->
+            <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-emerald-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Active Customers</p>
+                    <h3 class="text-2xl font-bold text-white mt-1" id="kpi-active-subs">0</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-indigo-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Monthly Revenue (MRR)</p>
+                    <h3 class="text-2xl font-bold text-white mt-1" id="kpi-mrr">$0.00</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-blue-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Annual Run Rate (ARR)</p>
+                    <h3 class="text-2xl font-bold text-white mt-1" id="kpi-arr">$0.00</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-teal-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Avg Customer LTV</p>
+                    <h3 class="text-2xl font-bold text-emerald-400 mt-1" id="kpi-ltv">$0.00</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-red-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Gross Churn Rate</p>
+                    <h3 class="text-2xl font-bold text-red-400 mt-1" id="kpi-churn-rate">0.0%</h3>
+                </div>
+            </div>
+
+            <!-- Cohort Retention Matrix Heatmap -->
+            <div class="lg:col-span-2 glass-panel p-5 rounded-2xl flex flex-col h-[400px]">
+                <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wide flex items-center mb-4">
+                    <i data-lucide="grid" class="w-4 h-4 mr-2"></i> Dynamic Cohort Retention Matrix (Heatmap)
+                </h3>
+                <div class="flex-1 overflow-x-auto">
+                    <table class="w-full text-left font-mono text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-800 text-gray-400">
+                                <th class="py-2 pr-4">Cohort</th>
+                                <th class="py-2 px-2 text-right">Size</th>
+                                <th class="py-2 px-2 text-center">Month 0</th>
+                                <th class="py-2 px-2 text-center">Month 1</th>
+                                <th class="py-2 px-2 text-center">Month 2</th>
+                                <th class="py-2 px-2 text-center">Month 3</th>
+                                <th class="py-2 px-2 text-center">Month 4</th>
+                                <th class="py-2 px-2 text-center">Month 5</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cohort-matrix-body">
+                            <!-- Rows populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Cox Hazard Adjuster Controls -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between h-[400px]">
+                <div>
+                    <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wide flex items-center mb-5">
+                        <i data-lucide="sliders" class="w-4 h-4 mr-2"></i> Cox Hazard Predictor Tuning
+                    </h3>
+                    <div class="space-y-4 text-xs font-mono">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Support Ticket Freq</span>
+                                <span id="val-tickets" class="font-bold text-red-400">0 tickets</span>
+                            </div>
+                            <input type="range" min="0" max="6" value="1" class="w-full accent-red-600" id="slider-tickets" oninput="document.getElementById('val-tickets').innerText = this.value + ' ticket' + (this.value != 1 ? 's' : ''); updateSurvivalMath()">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Service Tier Premium</span>
+                                <span id="val-tier" class="font-bold text-emerald-400">Growth Tier</span>
+                            </div>
+                            <input type="range" min="1" max="3" value="2" class="w-full accent-emerald-600" id="slider-tier" oninput="document.getElementById('val-tier').innerText = (this.value == 1 ? 'Basic' : this.value == 2 ? 'Growth' : 'Enterprise') + ' Tier'; updateSurvivalMath()">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Lock Contract Term</span>
+                                <span id="val-contract" class="font-bold text-indigo-400">Monthly</span>
+                            </div>
+                            <input type="range" min="1" max="12" value="1" class="w-full accent-indigo-600" id="slider-contract" oninput="document.getElementById('val-contract').innerText = this.value == 12 ? 'Annual (12mo)' : 'Monthly'; updateSurvivalMath()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-emerald-950 bg-emerald-950/20 p-3 rounded-lg text-xs space-y-2 mt-4">
+                    <div class="flex justify-between font-bold text-white">
+                        <span>Projected Churn Multiplier:</span>
+                        <span id="hazard-mult-lbl" class="text-red-400">1.00x</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 leading-normal">Linear predictor adjusts Kaplan-Meier estimations live using Cox Proportional Hazard Ratios: exp(&beta;*X)</p>
+                </div>
+            </div>
+
+            <!-- Kaplan-Meier Line Chart Curve -->
+            <div class="lg:col-span-2 glass-panel p-5 rounded-2xl flex flex-col h-[350px]">
+                <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wide flex items-center mb-4">
+                    <i data-lucide="line-chart" class="w-4 h-4 mr-2"></i> Statistical Churn curves (Kaplan-Meier Survival Probability)
+                </h3>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="survivalChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Live Events Ticker -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col h-[350px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wide flex items-center">
+                        <i data-lucide="activity" class="w-4 h-4 mr-2"></i> Lifecycle Events Stream
+                    </h3>
+                    <button onclick="toggleSimulation()" id="sim-toggle-btn" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white">PAUSE</button>
+                </div>
+                <div class="flex-1 overflow-y-auto font-mono text-[10px] space-y-2 pr-2" id="event-ticker">
+                    <!-- Events populated dynamically -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SAAS INTERVIEW GUIDE TAB -->
+        <!-- ========================================== -->
+        <section id="pane-interview-guide" class="glass-panel p-8 rounded-3xl max-w-4xl mx-auto space-y-6 hidden">
+            <h2 class="text-2xl font-bold tracking-wide text-white border-b border-gray-800 pb-4 flex items-center">
+                <i data-lucide="book-open" class="w-6 h-6 text-emerald-400 mr-2"></i> Apex Portfolio Blueprint & Interview Sheet
+            </h2>
+
+            <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+                <div>
+                    <h3 class="text-lg font-bold text-emerald-400 mb-2 font-mono">1. How to Pitch this Project in SaaS Interviews</h3>
+                    <p class="mb-4">Use the **STAR Method** to articulate cohort and survival statistics for high-value operations roles:</p>
+                    
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 space-y-3 text-xs font-mono">
+                        <p><strong class="text-emerald-400">SITUATION:</strong> "SaaS businesses fail when customer attrition goes unmonitored. Standard churn modeling relies on static, binary classification models that overlook the crucial element of *time* in subscriber decay."</p>
+                        <p><strong class="text-emerald-400">TASK:</strong> "I wanted to construct a cohort intelligence pipeline that implements time-varying survival equations (Kaplan-Meier and Cox Proportional Hazards) to project Customer Lifetime Value (LTV) and map monthly subscriber cohort drop-off matrices."</p>
+                        <p><strong class="text-emerald-400">ACTION:</strong> "I engineered a dynamic client-side application. I hand-coded survival algorithms in JavaScript, generated a color-coded cohort matrix heatmap, plotted an interactive Kaplan-Meier survival curve with Chart.js, and programmed Cox sliders that alter hazard ratios dynamically."</p>
+                        <p><strong class="text-emerald-400">RESULT:</strong> "The platform lets managers simulate subscriber life decay ratios on the fly, demonstrating a deep mathematical understanding of customer retention engineering."</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold text-emerald-400 mb-2 font-mono">2. Key Industry Vocabulary</h3>
+                    <div class="flex flex-wrap gap-2 text-xs font-mono">
+                        <span class="px-3 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full">Kaplan-Meier Survival Probability</span>
+                        <span class="px-3 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full">Cox Proportional Hazards Model</span>
+                        <span class="px-3 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full">Cohort Retention Heatmaps</span>
+                        <span class="px-3 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full">Monthly Recurring Revenue (MRR)</span>
+                        <span class="px-3 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full">Customer Lifetime Value (LTV) Modeling</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-panel border-t border-gray-800 px-6 py-4 text-center text-xs text-gray-500 font-mono flex items-center justify-between">
+        <p>© 2026 Apex Analytics Systems | Operations-Ready Models</p>
+        <p class="text-emerald-400">Tailored for SaaS Recruiting</p>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- INTERACTIVE APP LOGIC -->
+    <!-- ========================================== -->
+    <script>
+        // Global variables
+        let isSimActive = true;
+        let activeSubs = {};
+        let churnedSubs = [];
+        let simTimer = null;
+        
+        let totalChurnCount = 0;
+        let totalHistoricalCount = 0;
+
+        // Pricing Configs
+        const tierPrices = { "Basic": 49.0, "Growth": 149.0, "Enterprise": 499.0 };
+        const cohorts = ["Jan", "Feb", "Mar", "Apr", "May"];
+        const cohortSizes = { "Jan": 120, "Feb": 145, "Mar": 160, "Apr": 185, "May": 90 };
+        
+        const cohortRetention = {
+            "Jan": [100.0, 92.5, 87.0, 81.2, 76.5, 73.0],
+            "Feb": [100.0, 94.2, 89.5, 84.0, 79.2, 0.0],
+            "Mar": [100.0, 95.0, 91.2, 87.5, 0.0, 0.0],
+            "Apr": [100.0, 96.8, 93.0, 0.0, 0.0, 0.0],
+            "May": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        };
+
+        let survivalChart = null;
+
+        window.addEventListener('load', () => {
+            lucide.createIcons();
+            initializeSurvivalChart();
+            seedActiveSubscribers();
+            renderCohortHeatmap();
+            startEventSimulation();
+            updateSurvivalMath();
+        });
+
+        // Tab switching
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'interview-guide'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const pane = document.getElementById(`pane-${t}`);
+                if (t === tabId) {
+                    btn.classList.add('active');
+                    btn.classList.add('text-emerald-400');
+                    btn.classList.remove('text-gray-400');
+                    pane.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.remove('text-emerald-400');
+                    btn.classList.add('text-gray-400');
+                    pane.classList.add('hidden');
+                }
+            });
+        }
+
+        // Initialize K-M survival curves chart (using Chart.js)
+        function initializeSurvivalChart() {
+            const ctx = document.getElementById('survivalChart').getContext('2d');
+            survivalChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 13}, (_, i) => `Month ${i}`),
+                    datasets: [
+                        {
+                            label: 'Baseline Curve S(t)',
+                            data: [],
+                            borderColor: '#374151',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Adjusted Hazard Risk Curve S(t)',
+                            data: [],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9CA3AF' } },
+                        y: { 
+                            min: 0, 
+                            max: 100, 
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                            ticks: { 
+                                color: '#9CA3AF',
+                                callback: (v) => v + "%"
+                            } 
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#FFF' } }
+                    }
+                }
+            });
+        }
+
+        // Seed initial data sets
+        function seedActiveSubscribers() {
+            totalHistoricalCount = 700;
+            totalChurnCount = 135;
+            
+            for (let i = 0; i < 150; i++) {
+                const subId = "SUB-" + Math.floor(Math.random() * 90000 + 10000);
+                const tier = ["Basic", "Growth", "Enterprise"][Math.floor(Math.random() * 3)];
+                const cohort = cohorts[Math.floor(Math.random() * cohorts.length)];
+                activeSubs[subId] = {
+                    id: subId,
+                    tier: tier,
+                    mrr: tierPrices[tier],
+                    cohort: cohort,
+                    duration: Math.floor(Math.random() * 5 + 1),
+                    tickets: Math.random() < 0.70 ? 0 : Math.floor(Math.random() * 3 + 1),
+                    contract: Math.random() < 0.40 ? 12 : 1
+                };
+            }
+            updateMetricsDOM();
+        }
+
+        // Render Heatmap Matrix
+        function renderCohortHeatmap() {
+            const tbody = document.getElementById('cohort-matrix-body');
+            tbody.innerHTML = '';
+            
+            cohorts.forEach(cohort => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-900 hover:bg-gray-900/35';
+                
+                let cellsHTML = `
+                    <td class="py-3 pr-4 font-bold text-white">${cohort}</td>
+                    <td class="py-3 px-2 text-right text-gray-400 font-bold">${cohortSizes[cohort]}</td>
+                `;
+                
+                for (let m = 0; m < 6; m++) {
+                    const val = cohortRetention[cohort][m];
+                    if (val === 0.0) {
+                        cellsHTML += `<td class="py-3 px-2 text-center text-gray-600">-</td>`;
+                    } else {
+                        // Apply heatmap styles
+                        let bgClass = "bg-emerald-950/40 text-emerald-400 border border-emerald-900/30";
+                        if (val < 90.0 && val >= 80.0) {
+                            bgClass = "bg-yellow-950/40 text-yellow-400 border border-yellow-900/30";
+                        } else if (val < 80.0) {
+                            bgClass = "bg-red-950/40 text-red-400 border border-red-900/30";
+                        }
+                        cellsHTML += `<td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded font-bold ${bgClass}">${val.toFixed(1)}%</span></td>`;
+                    }
+                }
+                
+                row.innerHTML = cellsHTML;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Run Event Loop
+        function startEventSimulation() {
+            if (simTimer) clearInterval(simTimer);
+            simTimer = setInterval(() => {
+                if (isSimActive) {
+                    runNextSimulationStep();
+                }
+            }, 1000);
+        }
+
+        function toggleSimulation() {
+            isSimActive = !isSimActive;
+            const btn = document.getElementById('sim-toggle-btn');
+            const lbl = document.getElementById('sim-status-lbl');
+            if (isSimActive) {
+                btn.innerText = "PAUSE";
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white";
+                lbl.innerText = "ACTIVE";
+                lbl.className = "text-emerald-400 font-bold";
+            } else {
+                btn.innerText = "PLAY";
+                btn.className = "bg-indigo-600 hover:bg-indigo-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white";
+                lbl.innerText = "PAUSED";
+                lbl.className = "text-yellow-400 font-bold";
+            }
+        }
+
+        function runNextSimulationStep() {
+            const types = ["signup", "ticket", "upgrade", "churn_check"];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            const activeKeys = Object.keys(activeSubs);
+            
+            if (type === "signup" || activeKeys.length === 0) {
+                // Customer Signup
+                const subId = "SUB-" + Math.floor(Math.random() * 90000 + 10000);
+                const tier = ["Basic", "Growth", "Enterprise"][Math.floor(Math.random() * 3)];
+                const mrr = tierPrices[tier];
+                activeSubs[subId] = {
+                    id: subId,
+                    tier: tier,
+                    mrr: mrr,
+                    cohort: "May",
+                    duration: 0,
+                    tickets: 0,
+                    contract: Math.random() < 0.30 ? 12 : 1
+                };
+                
+                cohortSizes["May"]++;
+                totalHistoricalCount++;
+                
+                logEvent(`[SIGN-UP] Customer ${subId} joined ${tier} Tier (+${mrr}/mo)`, 'text-emerald-400 font-bold');
+                
+            } else if (type === "ticket") {
+                // Support ticket
+                const key = activeKeys[Math.floor(Math.random() * activeKeys.length)];
+                activeSubs[key].tickets++;
+                logEvent(`[TICKET] ${key} raised support ticket. Active: ${activeSubs[key].tickets}`, 'text-yellow-400');
+                
+            } else if (type === "upgrade") {
+                // Upgrade
+                const key = activeKeys[Math.floor(Math.random() * activeKeys.length)];
+                const sub = activeSubs[key];
+                if (sub.tier !== "Enterprise") {
+                    const oldTier = sub.tier;
+                    const newTier = oldTier === "Basic" ? "Growth" : "Enterprise";
+                    sub.tier = newTier;
+                    sub.mrr = tierPrices[newTier];
+                    logEvent(`[UPGRADE] ${key} migrated ${oldTier} ➡️ ${newTier} (+${sub.mrr - tierPrices[oldTier]} MRR)`, 'text-indigo-400 font-bold');
+                }
+            } else {
+                // Churn evaluation based on Cox Hazard Multipliers
+                const key = activeKeys[Math.floor(Math.random() * activeKeys.length)];
+                const sub = activeSubs[key];
+                
+                // Live Cox regression adjustments
+                const betaTickets = 0.25;
+                const betaTier = -0.12;
+                const betaContract = -0.50;
+                
+                const tierIdx = ["Basic", "Growth", "Enterprise"].indexOf(sub.tier) + 1;
+                const lp = (betaTickets * sub.tickets) + (betaTier * tierIdx) + (betaContract * sub.contract);
+                const hazardMultiplier = Math.exp(lp);
+                
+                const baseChurnProb = 0.04;
+                const prob = Math.min(0.90, baseChurnProb * hazardMultiplier);
+                
+                if (Math.random() < prob) {
+                    // Churn customer
+                    delete activeSubs[key];
+                    totalChurnCount++;
+                    
+                    const cohort = sub.cohort;
+                    const dur = Math.min(5, sub.duration);
+                    for (let i = dur + 1; i < 6; i++) {
+                        cohortRetention[cohort][i] = Math.max(35.0, cohortRetention[cohort][i] - Math.random() * 2.5);
+                    }
+                    
+                    logEvent(`[CHURN 🚨] ${key} cancelled subscription (${sub.tier}) after ${sub.duration} mos.`, 'text-red-400 font-bold');
+                    renderCohortHeatmap();
+                } else {
+                    sub.duration++;
+                    logEvent(`[RENEWAL] ${key} subscription renewed for Month ${sub.duration}.`, 'text-gray-500');
+                }
+            }
+            
+            updateMetricsDOM();
+        }
+
+        function logEvent(msg, styleClass) {
+            const ticker = document.getElementById('event-ticker');
+            const line = document.createElement('div');
+            line.className = `py-1 border-b border-gray-900 ${styleClass}`;
+            line.innerText = `${new Date().toLocaleTimeString().split(" ")[0]} | ${msg}`;
+            
+            ticker.appendChild(line);
+            ticker.scrollTop = ticker.scrollHeight;
+            
+            if (ticker.childNodes.length > 40) {
+                ticker.removeChild(ticker.firstChild);
+            }
+        }
+
+        // Live math calculations and graph updates
+        function updateSurvivalMath() {
+            const tickets = parseInt(document.getElementById('slider-tickets').value);
+            const tierVal = parseInt(document.getElementById('slider-tier').value);
+            const contract = parseInt(document.getElementById('slider-contract').value);
+            
+            // Cox proportional hazards scaling
+            const betaTickets = 0.25;
+            const betaTier = -0.12;
+            const betaContract = -0.50;
+            
+            const linearPredictor = (betaTickets * tickets) + (betaTier * tierVal) + (betaContract * contract);
+            const hazardMultiplier = Math.exp(linearPredictor);
+            
+            document.getElementById('hazard-mult-lbl').innerText = hazardMultiplier.toFixed(2) + "x";
+            
+            // Calculate baseline and adjusted survival curves
+            const baselineCurve = [100, 94, 89, 84, 80, 75, 71, 68, 64, 61, 58, 55, 52];
+            const adjustedCurve = baselineCurve.map(val => {
+                const s = val / 100.0;
+                // S(t) = S_0(t)^exp(beta*X)
+                const adjustedS = Math.pow(s, hazardMultiplier);
+                return Math.max(10, Math.round(adjustedS * 100.0));
+            });
+            
+            survivalChart.data.datasets[0].data = baselineCurve;
+            survivalChart.data.datasets[1].data = adjustedCurve;
+            survivalChart.update();
+            
+            updateMetricsDOM();
+        }
+
+        function updateMetricsDOM() {
+            const activeCount = Object.keys(activeSubs).length;
+            const currentMRR = Object.values(activeSubs).reduce((acc, sub) => acc + sub.mrr, 0.0);
+            
+            // Average customer lifespan
+            const durations = Object.values(activeSubs).map(sub => sub.duration);
+            const avgLifespan = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 3.8;
+            
+            // LTV estimation
+            const avgLTV = activeCount > 0 ? (currentMRR / activeCount) * avgLifespan : 0.0;
+            
+            // Churn calculation
+            const churnRate = totalHistoricalCount > 0 ? (totalChurnCount / totalHistoricalCount) * 100.0 : 0.0;
+            
+            document.getElementById('kpi-active-subs').innerText = activeCount.toLocaleString();
+            document.getElementById('kpi-mrr').innerText = "$" + currentMRR.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpi-arr').innerText = "$" + (currentMRR * 12).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpi-ltv').innerText = "$" + avgLTV.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpi-churn-rate').innerText = churnRate.toFixed(1) + "%";
+        }
+    </script>
+</body>
+</html>

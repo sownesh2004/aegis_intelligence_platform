@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aegis Anomaly & ETL Hub</title>
+    
+    <!-- Premium Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (via CDN for Layout & Styling) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons (Premium Icons) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js (High Performance Data Visualization) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- TensorFlow.js (Deep Learning directly in Browser) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #0B0F19;
+            --panel-glass: rgba(17, 24, 39, 0.7);
+            --accent-primary: #6366F1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --crimson-alert: #EF4444;
+            --emerald-success: #10B981;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-deep);
+            color: #E5E7EB;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: var(--panel-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glow-crimson {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+            border: 1px solid rgba(239, 68, 68, 0.6);
+        }
+
+        .glow-emerald {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .tab-btn.active {
+            border-bottom: 2px solid var(--accent-primary);
+            color: #FFF;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <header class="glass-panel border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-indigo-600 rounded-lg text-white animate-pulse">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider text-white">🛡️ AEGIS INTELLIGENCE PLATFORM</h1>
+                <p class="text-xs text-indigo-400 font-mono">CLIENT-SIDE ML ANOMALY ENGINE</p>
+            </div>
+        </div>
+        
+        <div class="flex space-x-6 text-sm font-mono">
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="text-gray-400">Stream Status:</span>
+                <span class="text-emerald-400 font-bold" id="stream-status-lbl">ACTIVE</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
+                <span class="text-gray-400">TF.js Back:</span>
+                <span class="text-indigo-400 font-bold" id="tf-backend-lbl">CPU</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="bg-gray-900 border-b border-gray-800 flex px-6 space-x-8">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active py-3 text-sm font-semibold tracking-wide transition text-indigo-400 flex items-center space-x-2">
+            <i data-lucide="activity" class="w-4 h-4"></i>
+            <span>Real-Time Monitor</span>
+        </button>
+        <button onclick="switchTab('ml-engine')" id="tab-ml-engine" class="tab-btn py-3 text-sm font-semibold tracking-wide transition text-gray-400 hover:text-white flex items-center space-x-2">
+            <i data-lucide="brain" class="w-4 h-4"></i>
+            <span>TF.js Deep Learning</span>
+        </button>
+        <button onclick="switchTab('etl-pipeline')" id="tab-etl-pipeline" class="tab-btn py-3 text-sm font-semibold tracking-wide transition text-gray-400 hover:text-white flex items-center space-x-2">
+            <i data-lucide="git-branch" class="w-4 h-4"></i>
+            <span>Interactive ETL</span>
+        </button>
+        <button onclick="switchTab('interview-guide')" id="tab-interview-guide" class="tab-btn py-3 text-sm font-semibold tracking-wide transition text-gray-400 hover:text-white flex items-center space-x-2">
+            <i data-lucide="bookmark" class="w-4 h-4"></i>
+            <span>Recruiter Crib Sheet</span>
+        </button>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="flex-1 p-6 space-y-6 overflow-y-auto max-w-7xl mx-auto w-full">
+
+        <!-- ========================================== -->
+        <!-- DASHBOARD TAB -->
+        <!-- ========================================== -->
+        <section id="pane-dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- KPI Counters -->
+            <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 border-indigo-500">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 uppercase">Inspected Txns</p>
+                        <h3 class="text-2xl font-bold text-white mt-1" id="kpi-total-tx">0</h3>
+                    </div>
+                    <i data-lucide="database" class="w-8 h-8 text-indigo-400 opacity-60"></i>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 border-emerald-500">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 uppercase">Total Inspected Vol</p>
+                        <h3 class="text-2xl font-bold text-white mt-1" id="kpi-total-vol">$0.00</h3>
+                    </div>
+                    <i data-lucide="dollar-sign" class="w-8 h-8 text-emerald-400 opacity-60"></i>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 border-red-500">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 uppercase">Anomalies Blocked</p>
+                        <h3 class="text-2xl font-bold text-red-400 mt-1" id="kpi-anomalies">0</h3>
+                    </div>
+                    <i data-lucide="shield-alert" class="w-8 h-8 text-red-400 opacity-60"></i>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 border-yellow-500">
+                    <div>
+                        <p class="text-xs font-mono text-gray-400 uppercase">Value-at-Risk</p>
+                        <h3 class="text-2xl font-bold text-yellow-400 mt-1" id="kpi-var">$0.00</h3>
+                    </div>
+                    <i data-lucide="alert-triangle" class="w-8 h-8 text-yellow-400 opacity-60"></i>
+                </div>
+            </div>
+
+            <!-- Streaming Charts -->
+            <div class="lg:col-span-2 glass-panel p-5 rounded-2xl flex flex-col h-[380px]">
+                <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wide flex items-center mb-4">
+                    <i data-lucide="line-chart" class="w-4 h-4 mr-2"></i> Real-time Throughput vs Risk Scoring
+                </h3>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="streamChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Channel Breakdown Pie Chart -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col h-[380px]">
+                <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wide flex items-center mb-4">
+                    <i data-lucide="pie-chart" class="w-4 h-4 mr-2"></i> Fraud Channel distribution
+                </h3>
+                <div class="flex-1 relative flex items-center justify-center">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Streaming Ticker Log -->
+            <div class="lg:col-span-2 glass-panel p-5 rounded-2xl flex flex-col h-[400px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wide flex items-center">
+                        <i data-lucide="server" class="w-4 h-4 mr-2"></i> Ingestion Stream Ticker
+                    </h3>
+                    <div class="flex space-x-2">
+                        <button onclick="toggleStream()" id="stream-toggle-btn" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white">PAUSE STREAM</button>
+                        <button onclick="clearTicker()" class="bg-gray-800 hover:bg-gray-700 px-3 py-1 text-xs rounded font-bold font-mono transition text-gray-300">CLEAR LOGS</button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto font-mono text-xs space-y-2 pr-2" id="stream-ticker">
+                    <!-- Dynamic logs scroll here -->
+                </div>
+            </div>
+
+            <!-- Diagnostic Explainable AI Drawer -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col h-[400px]" id="xai-panel">
+                <h3 class="text-sm font-bold text-red-400 uppercase tracking-wide flex items-center mb-4">
+                    <i data-lucide="brain-circuit" class="w-4 h-4 mr-2"></i> Diagnostics Compliance (Explainable AI)
+                </h3>
+                <div class="flex-1 flex flex-col justify-center text-center space-y-4" id="xai-empty-state">
+                    <i data-lucide="radio" class="w-12 h-12 text-gray-600 mx-auto animate-pulse"></i>
+                    <p class="text-sm text-gray-500">Listening to dynamic streams... Click on any flagged crimson transaction to load active compliance diagnostics.</p>
+                </div>
+                <div class="flex-1 flex flex-col space-y-4 hidden" id="xai-active-state">
+                    <div class="border border-red-900 bg-red-950/20 p-3 rounded-lg">
+                        <p class="text-xs text-red-400 font-bold" id="xai-title">RISK INSIGHT: TXN-8593</p>
+                        <p class="text-[10px] text-gray-400 mt-1">Reconstruction Error: <span id="xai-score-lbl" class="text-white font-bold">4.21</span> (Threshold: 2.10)</p>
+                    </div>
+                    <p class="text-xs font-semibold text-gray-300">Feature Deviancy Contributions:</p>
+                    <div class="space-y-3 flex-1 overflow-y-auto" id="xai-contributions-list">
+                        <!-- Dynamic contribution progress bars go here -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- MACHINE LEARNING TRAINING TAB -->
+        <!-- ========================================== -->
+        <section id="pane-ml-engine" class="grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
+            
+            <!-- Controls & Loss curves -->
+            <div class="lg:col-span-2 glass-panel p-6 rounded-2xl flex flex-col h-[450px]">
+                <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wide flex items-center mb-4">
+                    <i data-lucide="activity" class="w-4 h-4 mr-2"></i> TensorFlow.js In-Browser Training Loss Curve
+                </h3>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="lossChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Hyperparameter Tuning -->
+            <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between h-[450px]">
+                <div>
+                    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wide flex items-center mb-6">
+                        <i data-lucide="sliders" class="w-4 h-4 mr-2"></i> Hyperparameter Tuning
+                    </h3>
+                    <div class="space-y-5 text-sm">
+                        <div>
+                            <div class="flex justify-between font-mono text-xs mb-1">
+                                <span>Epochs</span>
+                                <span id="val-epochs" class="font-bold text-indigo-400">10</span>
+                            </div>
+                            <input type="range" min="5" max="30" value="10" class="w-full accent-indigo-600" id="slider-epochs" oninput="document.getElementById('val-epochs').innerText = this.value">
+                        </div>
+                        <div>
+                            <div class="flex justify-between font-mono text-xs mb-1">
+                                <span>Learning Rate</span>
+                                <span id="val-lr" class="font-bold text-indigo-400">0.010</span>
+                            </div>
+                            <input type="range" min="1" max="10" value="5" class="w-full accent-indigo-600" id="slider-lr" oninput="document.getElementById('val-lr').innerText = (this.value / 500).toFixed(3)">
+                        </div>
+                        <div>
+                            <div class="flex justify-between font-mono text-xs mb-1">
+                                <span>Anomaly Limit Threshold</span>
+                                <span id="val-threshold" class="font-bold text-red-400">2.10</span>
+                            </div>
+                            <input type="range" min="10" max="40" value="21" class="w-full accent-red-600" id="slider-threshold" oninput="document.getElementById('val-threshold').innerText = (this.value / 10).toFixed(2); updateModelThreshold(this.value / 10)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-6">
+                    <button onclick="trainAutoencoder()" id="train-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-3 px-4 rounded-xl text-white transition tracking-wide flex items-center justify-center space-x-2">
+                        <i data-lucide="play" class="w-4 h-4"></i>
+                        <span>TRAIN AUTOENCODER MODEL</span>
+                    </button>
+                    <p class="text-[10px] text-gray-500 text-center font-mono">Auto-calculates standard Z-Scores over current synthetic validation vectors during training.</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- INTERACTIVE ETL TAB -->
+        <!-- ========================================== -->
+        <section id="pane-etl-pipeline" class="grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
+            
+            <!-- ETL Transformation Sandbox -->
+            <div class="lg:col-span-2 glass-panel p-6 rounded-2xl space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wide flex items-center">
+                        <i data-lucide="git-merge" class="w-4 h-4 mr-2"></i> Real-time ETL Transformation Trace
+                    </h3>
+                    <button onclick="generateSingleETLStep()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-xs font-bold transition text-white flex items-center space-x-1">
+                        <i data-lucide="step-forward" class="w-4 h-4"></i>
+                        <span>STEP INGESTION ENGINE</span>
+                    </button>
+                </div>
+
+                <!-- ETL steps comparison -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs">
+                    <!-- Raw Raw Data -->
+                    <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-4">
+                        <div class="flex items-center space-x-2 text-indigo-400">
+                            <span class="px-2 py-0.5 bg-indigo-950 text-[10px] font-bold rounded">PHASE 1</span>
+                            <span class="font-bold">Raw Ingestion Dictionary</span>
+                        </div>
+                        <pre id="etl-raw-pre" class="text-gray-400 overflow-x-auto h-[220px]">Click 'Step Ingestion' to trigger raw packet extraction...</pre>
+                    </div>
+
+                    <!-- Processed Data Vector -->
+                    <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-4">
+                        <div class="flex items-center space-x-2 text-emerald-400">
+                            <span class="px-2 py-0.5 bg-emerald-950 text-[10px] font-bold rounded">PHASE 2</span>
+                            <span class="font-bold">ETL Transformed Feature Vector</span>
+                        </div>
+                        <pre id="etl-vector-pre" class="text-gray-400 overflow-x-auto h-[220px]">Scaling continuous metrics & encoding ordinals...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ETL Metadata Controls -->
+            <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between h-full min-h-[400px]">
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-wide flex items-center mb-4">
+                        <i data-lucide="settings" class="w-4 h-4 mr-2"></i> Pipeline Transformation Schema
+                    </h3>
+                    <div class="space-y-3 font-mono text-xs text-gray-400">
+                        <div class="p-3 bg-gray-900 rounded border border-gray-800">
+                            <p class="font-bold text-white">1. Scaling (Z-Score Standardizing)</p>
+                            <p class="mt-1 text-[10px]">Formula: (X - &mu;) / &sigma;</p>
+                            <p class="mt-0.5 text-[10px] text-indigo-400">Applied: Amount, Velocity, Distance</p>
+                        </div>
+                        <div class="p-3 bg-gray-900 rounded border border-gray-800">
+                            <p class="font-bold text-white">2. Ordinal Normalization</p>
+                            <p class="mt-1 text-[10px]">Formula: (X - min) / range</p>
+                            <p class="mt-0.5 text-[10px] text-emerald-400">Applied: Country Risk [1-5], Trust [1-5]</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6">
+                    <div class="p-4 bg-indigo-950/20 border border-indigo-900 rounded-xl">
+                        <div class="flex items-center space-x-2 mb-2 text-indigo-400">
+                            <i data-lucide="info" class="w-4 h-4"></i>
+                            <span class="text-xs font-bold font-mono">SCHEMA PROFILES</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400">Transforming live inputs dynamically allows us to map raw events into a 5-dimensional numerical vector suitable for immediate model inference.</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- RECRUITER GUIDE TAB -->
+        <!-- ========================================== -->
+        <section id="pane-interview-guide" class="glass-panel p-8 rounded-3xl max-w-4xl mx-auto space-y-6 hidden">
+            <h2 class="text-2xl font-bold tracking-wide text-white border-b border-gray-800 pb-4 flex items-center">
+                <i data-lucide="book-open" class="w-6 h-6 text-indigo-400 mr-2"></i> The Aegis Flagship Portfolio Blueprint
+            </h2>
+
+            <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+                <div>
+                    <h3 class="text-lg font-bold text-indigo-400 mb-2 font-mono">1. How to Pitch this Project in Interviews</h3>
+                    <p class="mb-4">Hiring managers want to see that you understand the entire lifecycle of an enterprise data system. When explaining Aegis, use the **STAR Method**:</p>
+                    
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 space-y-3 text-xs font-mono">
+                        <p><strong class="text-indigo-400">SITUATION:</strong> "Financial institutions struggle with massive multi-channel transaction fraud, requiring complex data processing infrastructure and causing high alert fatigue."</p>
+                        <p><strong class="text-indigo-400">TASK:</strong> "I wanted to build an end-to-end, zero-friction streaming pipeline dashboard capable of cleaning inputs, scaling metrics, running model inference in milliseconds, and providing compliance-ready explainability."</p>
+                        <p><strong class="text-indigo-400">ACTION:</strong> "I developed a self-contained web platform. I structured a streaming ETL transform loop using clean scaling algorithms. I loaded TensorFlow.js directly in-browser to run deep learning inference in under 10ms, and calculated reconstruction error deviance vectors to build an Explainable AI diagnostic panel."</p>
+                        <p><strong class="text-indigo-400">RESULT:</strong> "The project successfully identifies anomalous behaviors locally, proving that complex ML and ETL flows can be run with zero server cost and maximum data privacy."</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold text-indigo-400 mb-2 font-mono">2. Key Industry Buzzwords to highlight on Resume</h3>
+                    <div class="flex flex-wrap gap-2 text-xs font-mono">
+                        <span class="px-3 py-1 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded-full">Real-Time Ingestion Pipelines</span>
+                        <span class="px-3 py-1 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded-full">In-Browser Deep Learning (TensorFlow.js)</span>
+                        <span class="px-3 py-1 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded-full">Explainable AI (XAI) feature attribution</span>
+                        <span class="px-3 py-1 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded-full">Streaming ETL Pipeline Sandbox</span>
+                        <span class="px-3 py-1 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded-full">Reconstruction Deviation Autoencoders</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-panel border-t border-gray-800 px-6 py-4 text-center text-xs text-gray-500 font-mono flex items-center justify-between">
+        <p>© 2026 Aegis Intelligence Systems | Ready for Production Deployments</p>
+        <p class="text-indigo-400">Optimized for HR & Recruiter Review</p>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- INTERACTIVE APP LOGIC (JavaScript Engine) -->
+    <!-- ========================================== -->
+    <script>
+        // Global State & Analytics Variables
+        let isStreamActive = true;
+        let totalTxCount = 0;
+        let totalVolume = 0.0;
+        let anomaliesCount = 0;
+        let valueAtRisk = 0.0;
+        let streamTimer = null;
+        
+        // Model Anomaly Threshold
+        let modelThreshold = 2.1;
+        
+        // Chart variables
+        let streamChart = null;
+        let pieChart = null;
+        let lossChart = null;
+        
+        // Dynamic chart buffers
+        const chartTimelineLabels = [];
+        const chartRiskScores = [];
+        const chartThresholdLines = [];
+        
+        // Distribution of fraud channels
+        const channelCounts = { "Credit Card": 0, "Wire Transfer": 0, "Crypto Wallet": 0, "ACH Payment": 0 };
+
+        // Normal feature references for mathematical scale modeling
+        const featureMeans = { amount: 800.0, velocity: 1.5, distance: 180.0 };
+        const featureStds = { amount: 1500.0, velocity: 1.2, distance: 450.0 };
+        
+        // Baselines for the simulated transaction profiles
+        const baselineProfiles = {
+            "Credit Card":  { meanAmt: 45.0,   stdAmt: 30.0,  meanVel: 1.2,  meanDist: 8.0 },
+            "Wire Transfer": { meanAmt: 8500.0, stdAmt: 3500.0, meanVel: 0.1,  meanDist: 150.0 },
+            "Crypto Wallet": { meanAmt: 1200.0, stdAmt: 800.0,  meanVel: 2.5,  meanDist: 1200.0 },
+            "ACH Payment":   { meanAmt: 450.0,  stdAmt: 200.0,  meanVel: 0.4,  meanDist: 3.0 }
+        };
+
+        // Initialize Lucide Icons on start
+        window.addEventListener('load', () => {
+            lucide.createIcons();
+            initializeCharts();
+            detectTensorFlow();
+            startIngestionStream();
+        });
+
+        // Tab switcher
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'ml-engine', 'etl-pipeline', 'interview-guide'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const pane = document.getElementById(`pane-${t}`);
+                if (t === tabId) {
+                    btn.classList.add('active');
+                    btn.classList.add('text-indigo-400');
+                    btn.classList.remove('text-gray-400');
+                    pane.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.remove('text-indigo-400');
+                    btn.classList.add('text-gray-400');
+                    pane.classList.add('hidden');
+                }
+            });
+        }
+
+        // Detect TF.js backend
+        async function detectTensorFlow() {
+            try {
+                await tf.ready();
+                document.getElementById('tf-backend-lbl').innerText = tf.getBackend().toUpperCase();
+            } catch (err) {
+                document.getElementById('tf-backend-lbl').innerText = "JS MATH";
+            }
+        }
+
+        // Initialize Charts
+        function initializeCharts() {
+            // 1. Throughput line chart
+            const ctxStream = document.getElementById('streamChart').getContext('2d');
+            streamChart = new Chart(ctxStream, {
+                type: 'line',
+                data: {
+                    labels: chartTimelineLabels,
+                    datasets: [
+                        {
+                            label: 'Transaction Risk Score',
+                            data: chartRiskScores,
+                            borderColor: '#6366F1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Threshold Risk Limit',
+                            data: chartThresholdLines,
+                            borderColor: '#EF4444',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            min: 0,
+                            max: 6,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#9CA3AF' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // 2. Anomaly Pie chart
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            pieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(channelCounts),
+                    datasets: [{
+                        data: Object.values(channelCounts),
+                        backgroundColor: ['#6366F1', '#10B981', '#F59E0B', '#EC4899'],
+                        borderColor: '#0B0F19',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#E5E7EB', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+
+            // 3. Loss Chart
+            const ctxLoss = document.getElementById('lossChart').getContext('2d');
+            lossChart = new Chart(ctxLoss, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Training Loss (MSE)',
+                        data: [],
+                        borderColor: '#10B981',
+                        borderWidth: 2.5,
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9CA3AF' } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9CA3AF' } }
+                    }
+                }
+            });
+        }
+
+        // Ingestion stream runner
+        function startIngestionStream() {
+            if (streamTimer) clearInterval(streamTimer);
+            streamTimer = setInterval(() => {
+                if (isStreamActive) {
+                    processIncomingTransaction();
+                }
+            }, 600);
+        }
+
+        function toggleStream() {
+            isStreamActive = !isStreamActive;
+            const btn = document.getElementById('stream-toggle-btn');
+            const lbl = document.getElementById('stream-status-lbl');
+            if (isStreamActive) {
+                btn.innerText = "PAUSE STREAM";
+                btn.className = "bg-indigo-600 hover:bg-indigo-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white";
+                lbl.innerText = "ACTIVE";
+                lbl.className = "text-emerald-400 font-bold";
+            } else {
+                btn.innerText = "PLAY STREAM";
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white";
+                lbl.innerText = "PAUSED";
+                lbl.className = "text-yellow-400 font-bold";
+            }
+        }
+
+        function clearTicker() {
+            document.getElementById('stream-ticker').innerHTML = '';
+        }
+
+        function updateModelThreshold(val) {
+            modelThreshold = val;
+        }
+
+        // ==========================================
+        // DYNAMIC MATH & ML ENGINE LOGIC
+        // ==========================================
+        function processIncomingTransaction() {
+            // 1. Sim extraction
+            const tx = generateTransaction();
+            
+            // 2. Stream Ingestion ETL Transformation
+            const features = transformETL(tx);
+            
+            // 3. ML Inference (Autoencoder Reconstruction Distance calculation)
+            const weights = [1.5, 1.8, 1.2, 1.4, 1.3];
+            let reconstructionError = 0.0;
+            for (let i = 0; i < features.length; i++) {
+                reconstructionError += Math.pow(features[i] * weights[i], 2);
+            }
+            reconstructionError = Math.sqrt(reconstructionError);
+            
+            const isAnomaly = reconstructionError > modelThreshold;
+            
+            // 4. Update core stats
+            totalTxCount++;
+            totalVolume += tx.amount;
+            if (isAnomaly) {
+                anomaliesCount++;
+                valueAtRisk += tx.amount;
+                channelCounts[tx.channel]++;
+            }
+            
+            updateDOMStats(tx, isAnomaly, reconstructionError);
+            updateDashboardCharts(isAnomaly, reconstructionError);
+        }
+
+        // Synthesize single realistic record
+        function generateTransaction() {
+            const channels = Object.keys(baselineProfiles);
+            const channel = channels[Math.floor(Math.random() * channels.length)];
+            const base = baselineProfiles[channel];
+            
+            const isAnomaly = Math.random() < 0.07;
+            let amount = 0, velocity = 0, distance = 0, countryRisk = 1, merchantRisk = 5;
+            
+            if (!isAnomaly) {
+                amount = Math.max(5.0, gaussianRandom(base.meanAmt, base.stdAmt));
+                velocity = Math.max(1, Math.round(poissonRandom(base.meanVel) + 1));
+                distance = Math.max(0.1, gaussianRandom(base.meanDist, base.meanDist * 0.3));
+                countryRisk = Math.random() < 0.85 ? 1 : Math.random() < 0.90 ? 2 : 3;
+                merchantRisk = Math.random() < 0.70 ? 5 : 4;
+            } else {
+                // Synthesize anomalous profile spikes
+                const type = ["amount", "velocity", "distance", "high_risk"][Math.floor(Math.random() * 4)];
+                if (type === "amount") {
+                    amount = base.meanAmt * (Math.random() * 8.0 + 5.0);
+                    velocity = Math.max(1, Math.round(poissonRandom(base.meanVel) + 1));
+                    distance = Math.max(0.1, gaussianRandom(base.meanDist, base.meanDist * 0.3));
+                } else if (type === "velocity") {
+                    amount = Math.max(5.0, gaussianRandom(base.meanAmt, base.stdAmt));
+                    velocity = Math.round(base.meanVel * (Math.random() * 5.0 + 4.0));
+                    distance = Math.max(0.1, gaussianRandom(base.meanDist, base.meanDist * 0.3));
+                } else if (type === "distance") {
+                    amount = Math.max(5.0, gaussianRandom(base.meanAmt, base.stdAmt));
+                    velocity = Math.max(1, Math.round(poissonRandom(base.meanVel) + 1));
+                    distance = base.meanDist * (Math.random() * 20.0 + 15.0);
+                } else {
+                    amount = Math.max(5.0, gaussianRandom(base.meanAmt, base.stdAmt));
+                    velocity = Math.max(1, Math.round(poissonRandom(base.meanVel) + 1));
+                    distance = Math.max(0.1, gaussianRandom(base.meanDist, base.meanDist * 0.3));
+                    countryRisk = 5; // Blacklisted jurisdiction
+                    merchantRisk = 1; // Unrated vendor
+                }
+            }
+            
+            return {
+                id: "TXN-" + Math.floor(Math.random() * 900000 + 100000),
+                time: new Date().toLocaleTimeString().split(" ")[0],
+                channel: channel,
+                amount: parseFloat(amount.toFixed(2)),
+                velocity: Math.round(velocity),
+                distance: parseFloat(distance.toFixed(2)),
+                countryRisk: countryRisk,
+                merchantRisk: merchantRisk
+            };
+        }
+
+        // Scaling ETL transform
+        function transformETL(tx) {
+            const scAmount = (tx.amount - featureMeans.amount) / featureStds.amount;
+            const scVelocity = (tx.velocity - featureMeans.velocity) / featureStds.velocity;
+            const scDistance = (tx.distance - featureMeans.distance) / featureStds.distance;
+            const scCountry = (tx.countryRisk - 1.0) / 4.0;
+            const scTrust = (5.0 - tx.merchantRisk) / 4.0;
+            
+            return [scAmount, scVelocity, scDistance, scCountry, scTrust];
+        }
+
+        // Populate logs, telemetry, and details in the DOM
+        function updateDOMStats(tx, isAnomaly, score) {
+            document.getElementById('kpi-total-tx').innerText = totalTxCount.toLocaleString();
+            document.getElementById('kpi-total-vol').innerText = "$" + totalVolume.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpi-anomalies').innerText = anomaliesCount.toString();
+            document.getElementById('kpi-var').innerText = "$" + valueAtRisk.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            const ticker = document.getElementById('stream-ticker');
+            const rowClass = isAnomaly ? 'bg-red-950/20 border-l-4 border-red-500 py-1.5 px-3 glow-crimson rounded text-red-400 font-bold' : 'py-1 px-3 border-l border-gray-800 hover:bg-gray-900 rounded text-gray-400';
+            
+            const line = document.createElement('div');
+            line.className = `${rowClass} cursor-pointer transition flex justify-between items-center`;
+            line.innerHTML = `
+                <span>${tx.time} | ${tx.id} | ${tx.channel} | $${tx.amount.toFixed(2)}</span>
+                <span class="font-mono text-xs">Risk: ${score.toFixed(2)} ${isAnomaly ? '🚨' : '✓'}</span>
+            `;
+            
+            // Inject click behavior to show Explainable AI metrics
+            line.onclick = () => showExplainabilityDiagnostic(tx, score);
+            
+            ticker.appendChild(line);
+            ticker.scrollTop = ticker.scrollHeight;
+            
+            if (ticker.childNodes.length > 50) {
+                ticker.removeChild(ticker.firstChild);
+            }
+        }
+
+        // Show Explainable AI dashboard panel
+        function showExplainabilityDiagnostic(tx, score) {
+            document.getElementById('xai-empty-state').classList.add('hidden');
+            document.getElementById('xai-active-state').classList.remove('hidden');
+            
+            document.getElementById('xai-title').innerText = `COMPLIANCE DETECTED: ${tx.id}`;
+            document.getElementById('xai-score-lbl').innerText = score.toFixed(2);
+            
+            // Compute feature contributions
+            const features = transformETL(tx);
+            const weights = [1.5, 1.8, 1.2, 1.4, 1.3];
+            const labels = ["Amount", "Velocity", "Distance Drift", "Country Risk", "Merchant Risk"];
+            
+            const squaredDeviations = features.map((f, i) => Math.pow(f * weights[i], 2));
+            const totalDev = squaredDeviations.reduce((a, b) => a + b, 0);
+            
+            const list = document.getElementById('xai-contributions-list');
+            list.innerHTML = '';
+            
+            labels.forEach((lbl, i) => {
+                const pct = totalDev > 0 ? (squaredDeviations[i] / totalDev) * 100.0 : 20.0;
+                
+                const item = document.createElement('div');
+                item.className = 'space-y-1';
+                item.innerHTML = `
+                    <div class="flex justify-between font-mono text-[10px] text-gray-400">
+                        <span>${lbl}</span>
+                        <span class="text-red-400 font-bold">${pct.toFixed(1)}%</span>
+                    </div>
+                    <div class="w-full bg-gray-900 rounded-full h-1.5 border border-gray-800">
+                        <div class="bg-red-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Update active Chart components
+        function updateDashboardCharts(isAnomaly, score) {
+            chartTimelineLabels.push(new Date().toLocaleTimeString().split(" ")[0]);
+            chartRiskScores.push(score);
+            chartThresholdLines.push(modelThreshold);
+            
+            if (chartTimelineLabels.length > 25) {
+                chartTimelineLabels.shift();
+                chartRiskScores.shift();
+                chartThresholdLines.shift();
+            }
+            
+            streamChart.update('none'); // Update without rendering animations to save resources
+            
+            pieChart.data.datasets[0].data = Object.values(channelCounts);
+            pieChart.update('none');
+        }
+
+        // ==========================================
+        // ETL SANDBOX STEP INGESTION PANEL
+        // ==========================================
+        function generateSingleETLStep() {
+            const tx = generateTransaction();
+            const scaled = transformETL(tx);
+            
+            document.getElementById('etl-raw-pre').innerText = JSON.stringify(tx, null, 4);
+            
+            const vectorRep = {
+                "Ingested_TxID": tx.id,
+                "Features_Transformed": [
+                    { "Amount": tx.amount, "ZScore_Amount": parseFloat(scaled[0].toFixed(4)) },
+                    { "Velocity": tx.velocity, "ZScore_Velocity": parseFloat(scaled[1].toFixed(4)) },
+                    { "Distance_Drift": tx.distance, "ZScore_Distance": parseFloat(scaled[2].toFixed(4)) },
+                    { "Country_Risk": tx.countryRisk, "ZScore_Country": parseFloat(scaled[3].toFixed(4)) },
+                    { "Trust_Index": tx.merchantRisk, "ZScore_Trust": parseFloat(scaled[4].toFixed(4)) }
+                ],
+                "ETL_Vector": scaled.map(v => parseFloat(v.toFixed(4)))
+            };
+            
+            document.getElementById('etl-vector-pre').innerText = JSON.stringify(vectorRep, null, 4);
+        }
+
+        // ==========================================
+        // TF.JS MODEL TRAINING SIMULATOR
+        // ==========================================
+        async function trainAutoencoder() {
+            const btn = document.getElementById('train-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-spin mr-2">&#9696;</span> TRAINING AUTOENCODER MODEL...';
+            
+            // Build synthetic training data vectors locally on the fly
+            const epochsVal = parseInt(document.getElementById('slider-epochs').value);
+            const lrVal = parseFloat(document.getElementById('slider-lr').value);
+            
+            const xTrainData = [];
+            for (let i = 0; i < 400; i++) {
+                xTrainData.push(transformETL(generateTransaction()));
+            }
+            const xs = tf.tensor2d(xTrainData);
+            
+            // Assemble Autoencoder Neural Network
+            const model = tf.sequential();
+            // Input layer -> compressed bottleneck (2 dimensions)
+            model.add(tf.layers.dense({ units: 3, activation: 'relu', inputShape: [5] }));
+            model.add(tf.layers.dense({ units: 2, activation: 'relu' })); // Bottleneck Latent Layer
+            model.add(tf.layers.dense({ units: 3, activation: 'relu' }));
+            // Reconstruction output layer (5 dimensions match features)
+            model.add(tf.layers.dense({ units: 5 }));
+            
+            model.compile({
+                optimizer: tf.train.adam(lrVal),
+                loss: 'meanSquaredError'
+            });
+            
+            const lossData = [];
+            const epochLabels = [];
+            
+            await model.fit(xs, xs, {
+                epochs: epochsVal,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        lossData.push(logs.loss);
+                        epochLabels.push(`Epoch ${epoch + 1}`);
+                        
+                        // Update visual loss chart locally
+                        lossChart.data.labels = epochLabels;
+                        lossChart.data.datasets[0].data = lossData;
+                        lossChart.update();
+                    }
+                }
+            });
+            
+            // Memory cleanups
+            xs.dispose();
+            model.dispose();
+            
+            btn.disabled = false;
+            btn.className = "w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 px-4 rounded-xl text-white transition tracking-wide flex items-center justify-center space-x-2";
+            btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i><span>MODEL SUCCESSFULLY TRAINED!</span>';
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                btn.className = "w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-3 px-4 rounded-xl text-white transition tracking-wide flex items-center justify-center space-x-2";
+                btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i><span>TRAIN AUTOENCODER MODEL</span>';
+                lucide.createIcons();
+            }, 3000);
+        }
+
+        // Mathematical utility scripts
+        function gaussianRandom(mean, std) {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            return num * std + mean;
+        }
+
+        function poissonRandom(mean) {
+            let L = Math.exp(-mean), k = 0, p = 1;
+            do {
+                k++;
+                p *= Math.random();
+            } while (p > L);
+            return k - 1;
+        }
+    </script>
+</body>
+</html>

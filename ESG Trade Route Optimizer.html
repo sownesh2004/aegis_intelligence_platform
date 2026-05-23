@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESG Trade Route Optimizer</title>
+    
+    <!-- Premium Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Leaflet.js (High Performance Client-Side Mapping) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #060B11;
+            --panel-glass: rgba(11, 20, 31, 0.75);
+            --accent-primary: #38BDF8; /* Cyber Sky Cyan */
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --crimson-alert: #EF4444;
+            --emerald-success: #10B981;
+            --amber-warning: #F59E0B;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-deep);
+            color: #E2E8F0;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: var(--panel-glass);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glow-cyan {
+            box-shadow: 0 0 20px var(--accent-glow);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+
+        /* Leaflet custom dark theme styling override */
+        .leaflet-container {
+            background: #0B1320 !important;
+        }
+        .leaflet-tile {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+        .leaflet-bar a {
+            background-color: #111B2D !important;
+            color: #FFF !important;
+            border-color: #1E293B !important;
+        }
+        .leaflet-popup-content-wrapper {
+            background-color: #111B2D !important;
+            color: #FFF !important;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+        }
+        .leaflet-popup-tip {
+            background-color: #111B2D !important;
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .tab-btn.active {
+            border-bottom: 2px solid var(--accent-primary);
+            color: #FFF;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- HEADER -->
+    <header class="glass-panel border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-sky-600 rounded-lg text-white glow-cyan">
+                <i data-lucide="globe" class="w-6 h-6 animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider text-white">🌐 ESG TRADE ROUTE OPTIMIZER</h1>
+                <p class="text-xs text-sky-400 font-mono">GLOBAL SUPPLY CHAIN & EMISSION FORECASTING ENGINE</p>
+            </div>
+        </div>
+        
+        <div class="flex space-x-6 text-sm font-mono">
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="text-gray-400">Shipment Tracker:</span>
+                <span class="text-emerald-400 font-bold" id="sim-status-lbl">ACTIVE</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i data-lucide="activity" class="w-4 h-4 text-sky-400"></i>
+                <span class="text-gray-400">Optimization Mode:</span>
+                <span class="text-indigo-400 font-bold">SPATIAL-TEMPORAL DELAY CO2</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="bg-gray-950 border-b border-gray-900 flex px-6 space-x-8">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active py-3 text-sm font-semibold tracking-wide transition text-sky-400 flex items-center space-x-2">
+            <i data-lucide="map" class="w-4 h-4"></i>
+            <span>Logistics Control Map</span>
+        </button>
+        <button onclick="switchTab('interview-guide')" id="tab-interview-guide" class="tab-btn py-3 text-sm font-semibold tracking-wide transition text-gray-400 hover:text-white flex items-center space-x-2">
+            <i data-lucide="bookmark" class="w-4 h-4"></i>
+            <span>Logistics Interview Sheet</span>
+        </button>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="flex-1 p-6 space-y-6 overflow-y-auto max-w-7xl mx-auto w-full">
+
+        <!-- ========================================== -->
+        <!-- CONTROL PANEL & MAP VIEW -->
+        <!-- ========================================== -->
+        <section id="pane-dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Operations KPIs Card Grid -->
+            <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-sky-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">In-Transit Vessels</p>
+                    <h3 class="text-2xl font-bold text-white mt-1" id="kpi-vessels">0</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-indigo-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Avg Route Congestion</p>
+                    <h3 class="text-2xl font-bold text-white mt-1" id="kpi-congestion">0%</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-amber-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Expected Delay (Transit)</p>
+                    <h3 class="text-2xl font-bold text-amber-400 mt-1" id="kpi-delay">0.0 hrs</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-emerald-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Dispatched Tonnage</p>
+                    <h3 class="text-2xl font-bold text-emerald-400 mt-1" id="kpi-tonnage">0 tons</h3>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col justify-between border-l-4 border-red-500">
+                    <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Projected CO2 footprint</p>
+                    <h3 class="text-2xl font-bold text-red-400 mt-1" id="kpi-co2">0.0 MT</h3>
+                </div>
+            </div>
+
+            <!-- Leaflet Map Container -->
+            <div class="lg:col-span-2 glass-panel rounded-2xl overflow-hidden h-[420px] flex flex-col relative">
+                <div class="absolute top-3 left-12 z-[1000] bg-gray-950/80 px-4 py-2 rounded-lg backdrop-blur border border-gray-800 text-xs font-mono">
+                    <span class="text-sky-400 font-bold">📡 REAL-TIME GEOSPATIAL CORRIDORS</span>
+                </div>
+                <div class="flex-1 w-full relative" id="map">
+                    <!-- Graceful Degradation Overlay -->
+                    <div id="map-fallback" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-slate-400 font-mono text-center p-6 space-y-3 z-[999]">
+                        <i data-lucide="globe" class="w-12 h-12 text-sky-400 animate-spin"></i>
+                        <h4 class="text-sm font-bold text-white uppercase tracking-wider">Spatial Telemetry Active (Offline Mode)</h4>
+                        <p class="text-[10px] leading-normal max-w-sm">Leaflet CDN map tiles offline. Spatial shipping vectors are active and processing delay queues under local telemetry.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Scenario Tuning Controls -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between h-[420px]">
+                <div>
+                    <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wide flex items-center mb-5">
+                        <i data-lucide="sliders" class="w-4 h-4 mr-2"></i> ESG Trade Route Optimizer
+                    </h3>
+                    <div class="space-y-4 text-xs font-mono">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Vessel Operating Speed</span>
+                                <span id="val-speed" class="font-bold text-emerald-400">14 knots</span>
+                            </div>
+                            <input type="range" min="8" max="24" value="14" class="w-full accent-emerald-600" id="slider-speed" oninput="document.getElementById('val-speed').innerText = this.value + ' knots'; updateRouteOptimization()">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Simulated Port Congestion</span>
+                                <span id="val-congestion-slider" class="font-bold text-amber-400">30%</span>
+                            </div>
+                            <input type="range" min="10" max="90" value="30" class="w-full accent-amber-600" id="slider-congestion" oninput="document.getElementById('val-congestion-slider').innerText = this.value + '%'; updateRouteOptimization()">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span>Carbon Taxation Rate</span>
+                                <span id="val-tax" class="font-bold text-indigo-400">$85/ton</span>
+                            </div>
+                            <input type="range" min="10" max="250" value="85" class="w-full accent-indigo-600" id="slider-tax" oninput="document.getElementById('val-tax').innerText = '$' + this.value + '/ton'; updateRouteOptimization()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-sky-950 bg-sky-950/20 p-3 rounded-lg text-xs space-y-2 mt-4">
+                    <div class="flex justify-between font-bold text-white">
+                        <span>Projected ESG Tax Impact:</span>
+                        <span id="tax-impact-lbl" class="text-red-400">$0.00</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 leading-normal">Carbon Tax is modeled exponentially based on vessel speeds, illustrating speed-to-carbon optimization footprints.</p>
+                </div>
+            </div>
+
+            <!-- Route Scenario Chart -->
+            <div class="lg:col-span-2 glass-panel p-5 rounded-2xl flex flex-col h-[350px]">
+                <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wide flex items-center mb-4">
+                    <i data-lucide="bar-chart" class="w-4 h-4 mr-2"></i> Speed vs delay vs Carbon Taxation (Trade-off Curve)
+                </h3>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="tradeoffChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Live Logistics Ticker -->
+            <div class="glass-panel p-5 rounded-2xl flex flex-col h-[350px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold text-sky-400 uppercase tracking-wide flex items-center">
+                        <i data-lucide="activity" class="w-4 h-4 mr-2"></i> Live Fleet Telemetry Logs
+                    </h3>
+                    <button onclick="toggleSimulation()" id="sim-toggle-btn" class="bg-sky-600 hover:bg-sky-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white">PAUSE</button>
+                </div>
+                <div class="flex-1 overflow-y-auto font-mono text-[10px] space-y-2 pr-2" id="log-ticker">
+                    <!-- Dynamic logs scroll here -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- SUPPLY CHAIN INTERVIEW GUIDE TAB -->
+        <!-- ========================================== -->
+        <section id="pane-interview-guide" class="glass-panel p-8 rounded-3xl max-w-4xl mx-auto space-y-6 hidden">
+            <h2 class="text-2xl font-bold tracking-wide text-white border-b border-gray-800 pb-4 flex items-center">
+                <i data-lucide="book-open" class="w-6 h-6 text-sky-400 mr-2"></i> ESG Trade Route Portfolio Blueprint & Interview Guide
+            </h2>
+
+            <div class="space-y-6 text-sm text-gray-300 leading-relaxed">
+                <div>
+                    <h3 class="text-lg font-bold text-sky-400 mb-2 font-mono">1. How to Pitch this Project in Interviews</h3>
+                    <p class="mb-4">Use the **STAR Method** to articulate spatial coordinates and carbon modeling during your interviews:</p>
+                    
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 space-y-3 text-xs font-mono">
+                        <p><strong class="text-sky-400">SITUATION:</strong> "SaaS-based shipping and carbon-accounting compliance has become critical. Logistics networks struggle to balance delivery speed targets against rising maritime carbon taxes."</p>
+                        <p><strong class="text-sky-400">TASK:</strong> "I set out to design a global spatial supply chain predictor that evaluates maritime transit delays while estimating carbon footprints ($CO_2$ per ton-mile) dynamically."</p>
+                        <p><strong class="text-sky-400">ACTION:</strong> "I developed an interactive map using Leaflet.js to chart trading corridors. I coded carbon-emission calculators based on vessel speed and tonnage metrics, and built a trade-off optimizer charting transit delay against tax impacts."</p>
+                        <p><strong class="text-sky-400">RESULT:</strong> "The resulting engine lets fleet managers run real-time trade-off scenario analyses, showing an optimized balance between speeds, delays, and carbon emissions."</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold text-sky-400 mb-2 font-mono">2. Key Industry Vocabulary</h3>
+                    <div class="flex flex-wrap gap-2 text-xs font-mono">
+                        <span class="px-3 py-1 bg-sky-950 text-sky-300 border border-sky-800 rounded-full">Spatial-Temporal Routing Overlay</span>
+                        <span class="px-3 py-1 bg-sky-950 text-sky-300 border border-sky-800 rounded-full">Maritime Carbon Emissions ($CO_2$/ton-mile)</span>
+                        <span class="px-3 py-1 bg-sky-950 text-sky-300 border border-sky-800 rounded-full">ESG Environmental Tax Optimization</span>
+                        <span class="px-3 py-1 bg-sky-950 text-sky-300 border border-sky-800 rounded-full">Leaflet.js Geospatial Overlays</span>
+                        <span class="px-3 py-1 bg-sky-950 text-sky-300 border border-sky-800 rounded-full">Multi-Sensor Telemetry Loggers</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-panel border-t border-gray-800 px-6 py-4 text-center text-xs text-gray-500 font-mono flex items-center justify-between">
+        <p>© 2026 ESG Trade Route Optimizer Systems | Carbon Accounting</p>
+        <p class="text-sky-400">Tailored for Logistics & ESG Careers</p>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- INTERACTIVE APP LOGIC -->
+    <!-- ========================================== -->
+    <script>
+        let isSimActive = true;
+        let map = null;
+        let tradeoffChart = null;
+        let simTimer = null;
+        
+        let vesselCount = 0;
+        let totalTonnage = 0;
+        let totalCO2 = 0.0;
+        let averageDelay = 0.0;
+
+        // Custom marine port locations (Lat/Lon)
+        const ports = {
+            "New York": [40.7128, -74.0060],
+            "London": [51.5074, -0.1278],
+            "Rotterdam": [51.9244, 4.4777],
+            "Singapore": [1.3521, 103.8198],
+            "Shanghai": [31.2304, 121.4737],
+            "Sydney": [-33.8688, 151.2093]
+        };
+
+        const activeVoyages = [];
+
+        window.addEventListener('load', () => {
+            lucide.createIcons();
+            initializeMap();
+            initializeTradeoffChart();
+            seedInitialVoyages();
+            startTelemetrySimulation();
+            updateRouteOptimization();
+        });
+
+        // Tab switcher
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'interview-guide'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const pane = document.getElementById(`pane-${t}`);
+                if (t === tabId) {
+                    btn.classList.add('active');
+                    btn.classList.add('text-sky-400');
+                    btn.classList.remove('text-gray-400');
+                    pane.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.remove('text-sky-400');
+                    btn.classList.add('text-gray-400');
+                    pane.classList.add('hidden');
+                }
+            });
+        }
+
+        // Initialize Map using Leaflet.js
+        function initializeMap() {
+            try {
+                if (typeof L === 'undefined') throw new Error("Leaflet CDN resources unavailable");
+                
+                // Center the map view over Atlantic Ocean
+                map = L.map('map', {
+                    center: [25.0, -20.0],
+                    zoom: 2,
+                    zoomControl: true,
+                    attributionControl: false
+                });
+
+                // Dark thematic cartography layers
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                }).addTo(map);
+
+                // Add pulsing nodes for global ports
+                Object.keys(ports).forEach(name => {
+                    const coord = ports[name];
+                    L.circleMarker(coord, {
+                        color: '#38BDF8',
+                        fillColor: '#0B1320',
+                        fillOpacity: 0.8,
+                        radius: 6,
+                        weight: 2
+                    }).addTo(map).bindPopup(`<strong class="text-sky-400 font-mono">${name} Trade Hub</strong>`);
+                });
+            } catch (e) {
+                console.warn("Leaflet map initialization gracefully handled fallback:", e);
+                document.getElementById('map-fallback').classList.remove('hidden');
+            }
+        }
+
+        // Initialize Trade-off Chart using Chart.js
+        function initializeTradeoffChart() {
+            const ctx = document.getElementById('tradeoffChart').getContext('2d');
+            tradeoffChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 9}, (_, i) => `${8 + i * 2} knots`),
+                    datasets: [
+                        {
+                            label: 'Transit Delay Hours',
+                            data: [],
+                            backgroundColor: 'rgba(245, 158, 11, 0.4)',
+                            borderColor: '#F59E0B',
+                            borderWidth: 1.5,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Carbon Tax Accrued ($)',
+                            data: [],
+                            type: 'line',
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9CA3AF' } },
+                        y: { 
+                            position: 'left',
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                            ticks: { color: '#9CA3AF', callback: (v) => v + "h" }
+                        },
+                        y1: {
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#9CA3AF', callback: (v) => "$" + v }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#FFF' } }
+                    }
+                }
+            });
+        }
+
+        function seedInitialVoyages() {
+            const routes = [
+                ["New York", "London"],
+                ["Shanghai", "Singapore"],
+                ["Singapore", "Rotterdam"],
+                ["Sydney", "Shanghai"],
+                ["Rotterdam", "New York"]
+            ];
+
+            routes.forEach((route, i) => {
+                const origin = route[0];
+                const dest = route[1];
+                const tonnage = Math.floor(Math.random() * 20000 + 10000);
+                
+                let path = null;
+                let vesselMarker = null;
+
+                if (map) {
+                    try {
+                        path = L.polyline([ports[origin], ports[dest]], {
+                            color: '#38BDF8',
+                            weight: 1.5,
+                            opacity: 0.4,
+                            dashArray: '5, 5'
+                        }).addTo(map);
+
+                        vesselMarker = L.circleMarker(ports[origin], {
+                            color: '#10B981',
+                            fillColor: '#10B981',
+                            fillOpacity: 1,
+                            radius: 4
+                        }).addTo(map);
+                    } catch (err) {
+                        console.warn("Leaflet polyline overlay bypassed offline:", err);
+                    }
+                }
+
+                activeVoyages.push({
+                    id: `CARGO-${Math.floor(Math.random() * 900 + 100)}`,
+                    origin: origin,
+                    destination: dest,
+                    tonnage: tonnage,
+                    progress: 0.1 + (i * 0.15),
+                    marker: vesselMarker,
+                    path: path
+                });
+
+                totalTonnage += tonnage;
+                vesselCount++;
+            });
+        }
+
+        function startTelemetrySimulation() {
+            if (simTimer) clearInterval(simTimer);
+            simTimer = setInterval(() => {
+                if (isSimActive) {
+                    updateFleetTelemetry();
+                }
+            }, 1000);
+        }
+
+        function toggleSimulation() {
+            isSimActive = !isSimActive;
+            const btn = document.getElementById('sim-toggle-btn');
+            const lbl = document.getElementById('sim-status-lbl');
+            if (isSimActive) {
+                btn.innerText = "PAUSE";
+                btn.className = "bg-sky-600 hover:bg-sky-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white";
+                lbl.innerText = "ACTIVE";
+                lbl.className = "text-emerald-400 font-bold";
+            } else {
+                btn.innerText = "PLAY";
+                btn.className = "bg-indigo-600 hover:bg-indigo-500 px-3 py-1 text-xs rounded font-bold font-mono transition text-white";
+                lbl.innerText = "PAUSED";
+                lbl.className = "text-yellow-400 font-bold";
+            }
+        }
+
+        function updateFleetTelemetry() {
+            const speed = parseInt(document.getElementById('slider-speed').value);
+            const congestion = parseInt(document.getElementById('slider-congestion').value);
+            const tax = parseInt(document.getElementById('slider-tax').value);
+
+            activeVoyages.forEach(voyage => {
+                voyage.progress += (speed / 1000.0);
+                if (voyage.progress >= 1.0) {
+                    voyage.progress = 0.05;
+                    logTelemetry(`[ARRIVAL] ${voyage.id} reached ${voyage.destination}. Discharged ${voyage.tonnage.toLocaleString()} tons.`, 'text-emerald-400 font-bold');
+                }
+
+                if (voyage.marker) {
+                    try {
+                        const p1 = ports[voyage.origin];
+                        const p2 = ports[voyage.destination];
+                        const currentLat = p1[0] + (p2[0] - p1[0]) * voyage.progress;
+                        const currentLon = p1[1] + (p2[1] - p1[1]) * voyage.progress;
+                        voyage.marker.setLatLng([currentLat, currentLon]);
+                    } catch (err) {
+                        // Suppress map updates in offline mode
+                    }
+                }
+            });
+
+            if (Math.random() < 0.25) {
+                const randomVoyage = activeVoyages[Math.floor(Math.random() * activeVoyages.length)];
+                const distanceRatio = 3200;
+                const co2MetricTons = (randomVoyage.tonnage / 1000.0) * (Math.pow(speed, 2.5) / 250000.0) * (distanceRatio / 1000.0);
+                totalCO2 += co2MetricTons;
+
+                logTelemetry(`[TELEMETRY] ${randomVoyage.id} speed: ${speed} knots | Fuel flow optimized | CO2 output: ${co2MetricTons.toFixed(1)} MT`, 'text-gray-400');
+            }
+
+            if (Math.random() < 0.15) {
+                const randomPort = Object.keys(ports)[Math.floor(Math.random() * Object.keys(ports).length)];
+                logTelemetry(`[PORT CONGESTION] ${randomPort} queues altered. Congestion: ${congestion}%`, 'text-amber-400');
+            }
+
+            updateMetricsDOM();
+        }
+
+        function logTelemetry(msg, styleClass) {
+            const ticker = document.getElementById('log-ticker');
+            const line = document.createElement('div');
+            line.className = `py-1 border-b border-gray-900 ${styleClass}`;
+            line.innerText = `${new Date().toLocaleTimeString().split(" ")[0]} | ${msg}`;
+            
+            ticker.appendChild(line);
+            ticker.scrollTop = ticker.scrollHeight;
+            
+            if (ticker.childNodes.length > 40) {
+                ticker.removeChild(ticker.firstChild);
+            }
+        }
+
+        // Live math calculations and graph updates
+        function updateRouteOptimization() {
+            const speed = parseInt(document.getElementById('slider-speed').value);
+            const congestion = parseInt(document.getElementById('slider-congestion').value);
+            const tax = parseInt(document.getElementById('slider-tax').value);
+
+            const distance = 3500;
+            const delayTime = (congestion / 100.0) * 18.0;
+            averageDelay = delayTime;
+            
+            // Fuel Burn Exponential Curve: speed^2.5
+            const totalCO2Impact = (totalTonnage / 1000.0) * (Math.pow(speed, 2.5) / 250000.0);
+            const carbonTaxAccrued = totalCO2Impact * tax;
+
+            const taxImpactEl = document.getElementById('tax-impact-lbl');
+            if (taxImpactEl) {
+                taxImpactEl.innerText = "$" + carbonTaxAccrued.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+
+            const speedOptions = [8, 10, 12, 14, 16, 18, 20, 22, 24];
+            const delays = [];
+            const taxCurves = [];
+
+            speedOptions.forEach(s => {
+                const transit = distance / s;
+                const delay = transit * 0.1 + (congestion / 100.0) * 12.0;
+                delays.push(parseFloat(delay.toFixed(1)));
+
+                const co2 = (totalTonnage / 1000.0) * (Math.pow(s, 2.5) / 250000.0);
+                taxCurves.push(Math.round(co2 * tax));
+            });
+
+            if (tradeoffChart) {
+                tradeoffChart.data.datasets[0].data = delays;
+                tradeoffChart.data.datasets[1].data = taxCurves;
+                tradeoffChart.update();
+            }
+
+            updateMetricsDOM();
+        }
+
+        function updateMetricsDOM() {
+            const speedEl = document.getElementById('slider-speed');
+            const congestionEl = document.getElementById('slider-congestion');
+            if (!speedEl || !congestionEl) return;
+
+            const speed = parseInt(speedEl.value);
+            const congestion = parseInt(congestionEl.value);
+
+            const vesselsEl = document.getElementById('kpi-vessels');
+            const congestionElDom = document.getElementById('kpi-congestion');
+            const delayEl = document.getElementById('kpi-delay');
+            const tonnageEl = document.getElementById('kpi-tonnage');
+            const co2El = document.getElementById('kpi-co2');
+
+            if (vesselsEl) vesselsEl.innerText = vesselCount.toString();
+            if (congestionElDom) congestionElDom.innerText = congestion + "%";
+            if (delayEl) delayEl.innerText = averageDelay.toFixed(1) + " hrs";
+            if (tonnageEl) tonnageEl.innerText = totalTonnage.toLocaleString() + " tons";
+            if (co2El) co2El.innerText = totalCO2.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " MT";
+        }
+    </script>
+</body>
+</html>
